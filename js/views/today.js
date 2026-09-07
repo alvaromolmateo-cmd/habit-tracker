@@ -1,18 +1,13 @@
-// Vista principal: resumen del mes, registro de hoy, cuadrícula de hábitos y gráficas.
+// Vista Hoy: resumen, registro del día, tareas del día y gráficas del mes (peso, sueño y nota).
 
-import { getState, cycleHabit, dayHasData, STATE_LABEL } from '../store.js';
-import { activeHabits, habitsBySection, monthCompletion, habitCompletion, currentStreak, metricAverage, weightSummary } from '../stats.js';
+import { getState, emptyDay } from '../store.js';
+import { monthCompletion, currentStreak, weightSummary, metricAverage } from '../stats.js';
 import { esc, icon, fmtNum, fmtDelta, monthNav, progressBar } from '../ui.js';
-import { chart, ring, barList } from '../charts.js';
-import { dayFormHTML, bindDayForm, openDayEditor } from '../dayform.js';
-import { monthDays, todayKey, monthOf, monthLabel, dayLabel, dayNum, weekdayIdx, WEEKDAYS_SHORT, isFuture, isToday, currentMonth, addMonths } from '../dates.js';
-import { goalsCard, bindGoals, reviewCard, bindReview } from './shared.js';
-
-const METRICS = {
-  weight: { label: 'Peso (kg)', field: 'weight', unit: 'kg', decimals: 1 },
-  sleep: { label: 'Sueño (h)', field: 'sleep', unit: 'h', decimals: 1 },
-  mood: { label: 'Nota del día', field: 'mood', unit: '', decimals: 1, domain: [0, 10] },
-};
+import { chart, dataTable } from '../charts.js';
+import { dayFormHTML, bindDayForm } from '../dayform.js';
+import { tasksHTML, bindTasks, taskSummary } from '../tasks.js';
+import { eventsListHTML } from '../events.js';
+import { monthDays, todayKey, monthOf, monthLabel, dayLabel, dayNum, currentMonth, addMonths } from '../dates.js';
 
 function tile(ic, label, value, sub, tone) {
   return `
@@ -26,52 +21,18 @@ function tile(ic, label, value, sub, tone) {
     </div>`;
 }
 
-function habitGrid(state, keys, groups) {
-  const head = keys.map((k) => {
-    const wd = weekdayIdx(k);
-    return `<th class="${isToday(k) ? 'is-today' : ''} ${wd >= 5 ? 'is-we' : ''}"><span class="hg-dow">${WEEKDAYS_SHORT[wd]}</span><span class="hg-day">${dayNum(k)}</span></th>`;
-  }).join('');
-
-  const metricRow = (label, field) => `
-    <tr class="hg-metric">
-      <td class="hg-name">${label}</td>
-      ${keys.map((k) => {
-        const v = state.days[k]?.[field];
-        return `<td class="${isToday(k) ? 'is-today' : ''}"><button type="button" class="mcell" data-open="${k}" title="${esc(dayLabel(k))}">${v == null ? '' : fmtNum(v, 1)}</button></td>`;
-      }).join('')}
-      <td class="hg-pct">${fmtNum(metricAverage(state, keys, field), 1)}</td>
-    </tr>`;
-
-  const habitRow = (h) => {
-    const c = habitCompletion(state, keys, h.id);
-    return `
-      <tr>
-        <td class="hg-name"><span class="hg-emoji">${esc(h.emoji)}</span>${esc(h.name)}</td>
-        ${keys.map((k) => {
-          const day = state.days[k];
-          const s = day?.habits?.[h.id] || '';
-          const cls = s || (isFuture(k) ? 'future' : dayHasData(day) ? 'empty' : 'nolog');
-          return `<td class="${isToday(k) ? 'is-today' : ''}"><button type="button" class="cell ${cls}" data-cell data-key="${k}" data-habit="${h.id}" aria-label="${esc(h.name)}, día ${dayNum(k)}: ${STATE_LABEL[s] || 'sin marcar'}"></button></td>`;
-        }).join('')}
-        <td class="hg-pct">${c.pct == null ? '—' : `${c.pct}%`}</td>
-      </tr>`;
-  };
-
-  const span = keys.length + 2;
+function chartCard(state, keys, { title, ic, field, unit, goal, domain, color }) {
+  const points = keys.map((k) => ({ label: String(dayNum(k)), full: dayLabel(k), value: state.days[k]?.[field] ?? null }));
+  const present = points.filter((p) => p.value != null);
+  const avg = metricAverage(state, keys, field);
   return `
-    <div class="hgrid-wrap" data-scroll-key="hgrid">
-      <table class="hgrid">
-        <thead><tr><th class="hg-name">Hábito</th>${head}<th class="hg-pct">%</th></tr></thead>
-        <tbody>
-          <tr class="hg-section"><td colspan="${span}"><span>📈 Métricas</span></td></tr>
-          ${metricRow('🙂 Nota del día', 'mood')}
-          ${metricRow('⚖️ Peso (kg)', 'weight')}
-          ${metricRow('😴 Sueño (h)', 'sleep')}
-          ${groups.map((g) => `
-            <tr class="hg-section"><td colspan="${span}"><span>${g.section.emoji} ${esc(g.section.name)}</span></td></tr>
-            ${g.habits.map(habitRow).join('')}`).join('')}
-        </tbody>
-      </table>
+    <div class="card card-chart">
+      <div class="card-head">
+        <h2>${icon(ic)} ${title}</h2>
+        <span class="muted">${present.length ? `media ${fmtNum(avg, 1)}${unit ? ' ' + unit : ''}` : ''}</span>
+      </div>
+      ${chart('line', { points, unit, decimals: 1, goal: goal ?? null, goalLabel: 'Objetivo', domain: domain || null, title, height: 190, color, empty: `Sin datos de ${title.toLowerCase()} este mes` })}
+      ${dataTable(present.map((p) => [p.full, `${fmtNum(p.value, 1)}${unit ? ' ' + unit : ''}`]), ['Día', title])}
     </div>`;
 }
 
@@ -79,103 +40,72 @@ export function render(ctx) {
   const state = getState();
   const ym = ctx.month;
   const keys = monthDays(ym);
-  const habits = activeHabits(state);
-  const groups = habitsBySection(state);
   const tk = todayKey();
+  const today = state.days[tk] || emptyDay();
   const mc = monthCompletion(state, ym);
   const streak = currentStreak(state);
-  const mood = metricAverage(state, keys, 'mood');
-  const sleep = metricAverage(state, keys, 'sleep');
   const w = weightSummary(state, keys);
   const goal = state.settings.weightGoal;
+  const sleepGoal = state.settings.sleepGoal;
   const name = (state.settings.name || '').trim();
+  const tasks = taskSummary(state, tk);
 
-  const m = METRICS[ctx.chartMetric] || METRICS.weight;
-  const points = keys.map((k) => ({ label: String(dayNum(k)), full: dayLabel(k), value: state.days[k]?.[m.field] ?? null }));
-  const goalValue = m.field === 'weight' ? state.settings.weightGoal : m.field === 'sleep' ? state.settings.sleepGoal : null;
-  const spec = { points, unit: m.unit, decimals: m.decimals, goal: goalValue ?? null, goalLabel: 'Objetivo', domain: m.domain || null, title: m.label, height: 220, empty: `Sin datos de ${m.label.toLowerCase()} este mes` };
-
-  const items = habits.map((h) => {
-    const c = habitCompletion(state, keys, h.id);
-    return { emoji: h.emoji, label: h.name, pct: c.pct, value: c.pct, title: c.total ? `${fmtNum(c.done, 1)} de ${c.total} días` : 'Sin registros' };
-  });
-
-  const memos = keys.filter((k) => (state.days[k]?.memorable || '').trim()).slice(-6).reverse();
   const weightSub = w.count
     ? `${fmtNum(w.first, 1)} → ${fmtNum(w.last, 1)} kg${goal ? ` · objetivo ${fmtNum(goal, 1)}` : ''}`
     : 'Sin pesajes este mes';
   const weightValue = w.delta ? fmtDelta(w.delta, 'kg') : w.last != null ? `${fmtNum(w.last, 1)} <small>kg</small>` : '—';
 
+  const sleepValue = today.sleep == null ? '—' : `${fmtNum(today.sleep, 1)} <small>h</small>`;
+  let sleepSub = 'Sin registrar hoy';
+  if (today.sleep != null) {
+    if (sleepGoal) sleepSub = today.sleep >= sleepGoal ? `Objetivo de ${fmtNum(sleepGoal, 1)} h cumplido` : `${fmtDelta(today.sleep - sleepGoal, 'h')} respecto al objetivo`;
+    else sleepSub = 'Horas dormidas anoche';
+  }
+
   return `
-    <header class="page-head">
+    <header class="page-head page-head-compact">
       ${monthNav(monthLabel(ym))}
       <div class="page-actions">
-        ${ctx.standalone ? `<span class="badge">${icon('check-circle')} PWA instalada</span>` : ''}
-        <button class="btn btn-primary" data-today>${icon('plus')} Registrar hoy</button>
+        ${ctx.standalone ? `<span class="badge badge-pwa">${icon('check-circle')} PWA instalada</span>` : ''}
+        <button class="btn btn-primary" data-today>${icon('plus')}<span>Registrar<span class="btn-more"> hoy</span></span></button>
       </div>
     </header>
 
     <section class="tiles">
-      ${tile('flame', 'Racha actual', `${streak} <small>${streak === 1 ? 'día' : 'días'}</small>`, streak >= 3 ? '¡Sigue así!' : 'Cada día cuenta', 'green')}
-      ${tile('target', 'Cumplimiento', mc.pct == null ? '—' : `${mc.pct}%`, mc.total ? `${fmtNum(mc.done, 1)} de ${mc.total} hábitos${progressBar(mc.pct, 'sm')}` : 'Sin registros este mes', 'orange')}
-      ${tile('smile', 'Ánimo medio', mood == null ? '—' : `${fmtNum(mood, 1)} <small>/ 10</small>`, mood == null ? 'Sin notas todavía' : (sleep == null ? 'Sin datos de sueño' : `Sueño medio ${fmtNum(sleep, 1)} h`), 'red')}
-      ${tile('scale', 'Peso', weightValue, weightSub, 'blue')}
+      ${tile('flame', 'Racha actual', `${streak} <small>${streak === 1 ? 'día' : 'días'}</small>`, streak >= 3 ? '¡Sigue así!' : 'Cada día cuenta', 'accent')}
+      ${tile('target', 'Cumplimiento', mc.pct == null ? '—' : `${mc.pct}%`, mc.total ? `${fmtNum(mc.done, 1)} de ${mc.total} hábitos${progressBar(mc.pct, 'sm')}` : 'Sin registros este mes', 'primary')}
+      ${tile('moon', 'Sueño de hoy', sleepValue, sleepSub, 'blue')}
+      ${tile('scale', 'Peso', weightValue, weightSub, 'primary')}
     </section>
 
-    <section class="grid-main">
-      <div class="card card-today" id="today-card">
-        <div class="card-head">
-          <h2>${icon('sun')} Hoy · ${esc(dayLabel(tk))}</h2>
-          <span class="muted">${name ? `Hola, ${esc(name)}` : ''}</span>
-        </div>
-        ${dayFormHTML(state, tk)}
-      </div>
-
-      <div class="card card-chart">
-        <div class="card-head">
-          <h2>Evolución diaria</h2>
-          <select class="select" data-chart-metric aria-label="Métrica de la gráfica">
-            ${Object.entries(METRICS).map(([k, v]) => `<option value="${k}" ${k === ctx.chartMetric ? 'selected' : ''}>${v.label}</option>`).join('')}
-          </select>
-        </div>
-        ${chart('line', spec)}
-      </div>
-
-      <div class="card card-grid">
-        <div class="card-head">
-          <h2>Hábitos del mes</h2>
-          <div class="legend">
-            <span><i class="cell done"></i> Hecho</span>
-            <span><i class="cell partial"></i> A medias</span>
-            <span><i class="cell na"></i> No aplica</span>
-            <span><i class="cell empty"></i> No hecho</span>
+    <section class="grid-today">
+      <div class="col">
+        <div class="card card-today" id="today-card">
+          <div class="card-head">
+            <h2>${icon('sun')} Hoy · ${esc(dayLabel(tk))}</h2>
+            <span class="muted">${name ? `Hola, ${esc(name)}` : ''}</span>
           </div>
-        </div>
-        ${habitGrid(state, keys, groups)}
-        <p class="hint">Toca una casilla para cambiar su estado. Las métricas se editan pulsando sobre el día.</p>
-      </div>
-
-      <div class="card card-ring">
-        <div class="card-head"><h2>Cumplimiento de hábitos</h2></div>
-        <div class="ring-row">
-          ${ring({ pct: mc.pct, sub: mc.total ? `${fmtNum(mc.done, 1)} de ${mc.total}` : 'sin datos' })}
-          ${barList(items)}
+          ${dayFormHTML(state, tk)}
         </div>
       </div>
 
-      ${goalsCard(state, ym)}
-
-      <div class="card card-memo">
-        <div class="card-head">
-          <h2>${icon('feather')} Momentos memorables</h2>
-          <a class="link" href="#/reflexiones">Ver el mes</a>
+      <div class="col">
+        <div class="card card-tasks">
+          <div class="card-head">
+            <h2>${icon('list')} Tareas del día</h2>
+            <span class="muted">${tasks.total ? `${tasks.done} de ${tasks.total} hecha${tasks.total === 1 ? '' : 's'}` : ''}</span>
+          </div>
+          ${tasks.total ? progressBar((tasks.done / tasks.total) * 100) : ''}
+          ${tasksHTML(state, tk, { placeholder: 'Nueva tarea para hoy…', empty: 'Nada apuntado para hoy. Añade las tareas que quieras tachar.' })}
+          ${eventsListHTML(state, tk) ? `
+            <h3 class="sub-h">${icon('clock')} Eventos de hoy <a class="link" href="#/calendario">Calendario</a></h3>
+            ${eventsListHTML(state, tk)}` : ''}
         </div>
-        ${memos.length ? `<ul class="memo-preview">${memos.map((k) => `
-          <li><button type="button" data-open="${k}"><b>${dayNum(k)}</b><span>${esc(state.days[k].memorable)}</span></button></li>`).join('')}</ul>`
-          : `<p class="muted">Todavía no has escrito ningún momento este mes. Una línea por día basta.</p>`}
-      </div>
 
-      ${reviewCard(state, ym)}
+        ${chartCard(state, keys, { title: 'Peso', ic: 'scale', field: 'weight', unit: 'kg', goal, color: 'var(--series-1)' })}
+        ${chartCard(state, keys, { title: 'Sueño', ic: 'moon', field: 'sleep', unit: 'h', goal: sleepGoal, color: 'var(--series-2)' })}
+        ${chartCard(state, keys, { title: 'Nota del día', ic: 'smile', field: 'mood', unit: '', domain: [0, 10], color: 'var(--series-3)' })}
+      </div>
     </section>`;
 }
 
@@ -185,10 +115,6 @@ export function mount(root, ctx) {
     if (ctx.month !== monthOf(todayKey())) ctx.setMonth(currentMonth());
     requestAnimationFrame(() => document.getElementById('today-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   });
-  root.querySelector('[data-chart-metric]')?.addEventListener('change', (e) => ctx.set('chartMetric', e.target.value));
-  root.querySelectorAll('[data-cell]').forEach((b) => b.addEventListener('click', () => cycleHabit(b.dataset.key, b.dataset.habit)));
-  root.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openDayEditor(b.dataset.open)));
   bindDayForm(root);
-  bindGoals(root, ctx.month);
-  bindReview(root, ctx.month);
+  bindTasks(root);
 }

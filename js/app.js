@@ -7,16 +7,16 @@ import { currentMonth, todayKey } from './dates.js';
 import * as today from './views/today.js';
 import * as calendar from './views/calendar.js';
 import * as habits from './views/habits.js';
-import * as reflections from './views/reflections.js';
+import * as monthly from './views/monthly.js';
 import * as statistics from './views/statistics.js';
 import * as settings from './views/settings.js';
 
-const views = { hoy: today, calendario: calendar, habitos: habits, reflexiones: reflections, estadisticas: statistics, ajustes: settings };
-const titles = { hoy: 'Hoy', calendario: 'Calendario', habitos: 'Hábitos', reflexiones: 'Reflexiones', estadisticas: 'Estadísticas', ajustes: 'Ajustes' };
+const views = { hoy: today, calendario: calendar, habitos: habits, mensual: monthly, estadisticas: statistics, ajustes: settings };
+const ALIASES = { reflexiones: 'mensual' };
+const titles = { hoy: 'Hoy', calendario: 'Calendario', habitos: 'Hábitos', mensual: 'Mensual', estadisticas: 'Estadísticas', ajustes: 'Ajustes' };
 
 const ctx = {
   month: currentMonth(),
-  chartMetric: 'weight',
   statsRange: '3m',
   statsYear: new Date().getFullYear(),
   installPrompt: null,
@@ -37,7 +37,8 @@ const ctx = {
 };
 
 function currentRoute() {
-  const name = location.hash.replace(/^#\/?/, '').split(/[?/]/)[0] || 'hoy';
+  const raw = location.hash.replace(/^#\/?/, '').split(/[?/]/)[0] || 'hoy';
+  const name = ALIASES[raw] || raw;
   return views[name] ? name : 'hoy';
 }
 
@@ -88,7 +89,7 @@ function applyTheme() {
   const html = document.documentElement;
   if (t === 'auto') html.removeAttribute('data-theme'); else html.dataset.theme = t;
   const dark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute('content', dark ? '#1b1b19' : '#fbfaf6');
+  document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute('content', dark ? '#1c1717' : '#fcf9f8');
 }
 
 // ---------- eventos globales ----------

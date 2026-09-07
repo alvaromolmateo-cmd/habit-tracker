@@ -1,23 +1,26 @@
 // Cálculos: cumplimiento, rachas, medias y series para las gráficas.
 
-import { SECTIONS, dayHasData } from './store.js';
+import { dayHasData } from './store.js';
 import { monthDays, todayKey, addDays, weekdayIdx, rangeDays, yearOf, monthOf } from './dates.js';
 
 export const SCORE = { done: 1, partial: 0.5 };
 
-const sectionIdx = Object.fromEntries(SECTIONS.map((s, i) => [s.id, i]));
+export const sortedSections = (state) => (state.sections || []).slice().sort((a, b) => a.order - b.order);
+
+const sectionIndex = (state) => Object.fromEntries(sortedSections(state).map((s, i) => [s.id, i]));
+
+function sortHabits(state, list) {
+  const idx = sectionIndex(state);
+  return list.sort((a, b) => ((idx[a.section] ?? 999) - (idx[b.section] ?? 999)) || a.order - b.order);
+}
 
 export function activeHabits(state) {
-  return state.habits
-    .filter((h) => !h.archived)
-    .sort((a, b) => sectionIdx[a.section] - sectionIdx[b.section] || a.order - b.order);
+  return sortHabits(state, state.habits.filter((h) => !h.archived));
 }
 
 export function habitsBySection(state, { includeArchived = false } = {}) {
-  const list = includeArchived
-    ? state.habits.slice().sort((a, b) => sectionIdx[a.section] - sectionIdx[b.section] || a.order - b.order)
-    : activeHabits(state);
-  return SECTIONS
+  const list = includeArchived ? sortHabits(state, state.habits.slice()) : activeHabits(state);
+  return sortedSections(state)
     .map((section) => ({ section, habits: list.filter((h) => h.section === section.id) }))
     .filter((g) => g.habits.length);
 }

@@ -6,7 +6,7 @@ const path = require('path');
 const zlib = require('zlib');
 
 const OUT = path.join(__dirname, '..', 'icons');
-const GREEN = [0x33, 0x8f, 0x52];
+const RED = [0x8f, 0x24, 0x30];
 const WHITE = [255, 255, 255];
 
 const crcTable = new Uint32Array(256).map((_, n) => {
@@ -57,7 +57,7 @@ function sdSegment(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + abx * t), py - (ay + aby * t));
 }
 
-// Icono: cuadrado verde redondeado con un check blanco. maskable = fondo a sangre completa.
+// Icono: cuadrado rojo oscuro redondeado con un check blanco. maskable = fondo a sangre completa.
 function drawIcon(size, { maskable = false } = {}) {
   const rgba = Buffer.alloc(size * size * 4);
   const half = maskable ? size / 2 + 2 : size * 0.5;
@@ -79,7 +79,7 @@ function drawIcon(size, { maskable = false } = {}) {
       }
       const a = bg / (SS * SS); const f = fg / (SS * SS);
       const i = (y * size + x) * 4;
-      for (let c = 0; c < 3; c += 1) rgba[i + c] = Math.round(GREEN[c] * (1 - f) + WHITE[c] * f);
+      for (let c = 0; c < 3; c += 1) rgba[i + c] = Math.round(RED[c] * (1 - f) + WHITE[c] * f);
       rgba[i + 3] = Math.round(a * 255);
     }
   }
@@ -92,7 +92,7 @@ fs.writeFileSync(path.join(OUT, 'icon-512.png'), drawIcon(512));
 fs.writeFileSync(path.join(OUT, 'icon-maskable-512.png'), drawIcon(512, { maskable: true }));
 fs.writeFileSync(path.join(OUT, 'apple-touch-icon.png'), drawIcon(180, { maskable: true }));
 fs.writeFileSync(path.join(OUT, 'favicon.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="22" fill="#338f52"/>
+  <rect width="100" height="100" rx="22" fill="#8f2430"/>
   <path d="M27 53 43 69 74 36" fill="none" stroke="#fff" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `);

@@ -1,6 +1,6 @@
 # Habit Tracker
 
-Versión digital (PWA) del habit tracker que llevo en una libreta: hábitos en tres bloques, nota y peso diarios, horas de sueño, metas del mes, un momento memorable por día, calificación mensual y "¿qué mejorar el siguiente mes?". Se instala en el móvil y en el portátil, funciona sin conexión y guarda los datos en el propio dispositivo.
+Aplicación personal (PWA) para llevar el control de los hábitos del día a día: hábitos en secciones, nota y peso diarios, horas de sueño, tareas del día, eventos con horario, metas del mes y revisión mensual. Se instala en el móvil y en el portátil, funciona sin conexión y guarda los datos en el propio dispositivo.
 
 **App:** https://alvaromolmateo-cmd.github.io/habit-tracker/
 
@@ -8,18 +8,19 @@ Versión digital (PWA) del habit tracker que llevo en una libreta: hábitos en t
 
 | Vista | Contenido |
 |---|---|
-| **Hoy** | Resumen del mes (racha, cumplimiento, ánimo medio, peso), registro rápido de hoy (nota 1-10, peso, sueño, hábitos ✓ / ½ / —, momento memorable), cuadrícula de todos los hábitos × días del mes (como la página derecha de la libreta), gráfica de evolución (peso / sueño / nota) con objetivo, anillo de cumplimiento y % por hábito, metas del mes, momentos memorables y revisión mensual. |
-| **Calendario** | Mes completo con el % de cada día; cada día abre su editor (con navegación día a día). |
-| **Hábitos** | Crear, editar, ordenar, archivar y eliminar hábitos en los bloques *Físico y salud*, *Productividad* y *Rutina*. Muestra la racha actual y la mejor de cada uno. |
-| **Reflexiones** | La página izquierda de la libreta: metas del mes (pendiente / conseguida / no conseguida), una línea memorable por día, calificación del mes y qué mejorar. Historial de meses anteriores. |
+| **Hoy** | Resumen (racha, cumplimiento del mes, sueño de hoy, peso), registro de hoy (nota 1-10, peso, sueño, hábitos ✓ / ½ / —, momento memorable), **tareas del día** (listado que se va tachando, con los eventos de hoy) y gráficas del mes de peso, sueño y nota del día con su objetivo. |
+| **Calendario** | Mes completo con el % de cada día, sus eventos y sus tareas. Cada día abre un panel tipo agenda: **eventos con hora de inicio y fin** (o de todo el día), tareas del día y acceso al registro de hábitos. Debajo, la lista de eventos del mes. |
+| **Hábitos** | Crear, editar, ordenar, archivar y eliminar hábitos, y **crear, renombrar, ordenar y eliminar secciones**. Muestra la racha actual y la mejor de cada hábito. |
+| **Mensual** | Cuadrícula de todos los hábitos × días del mes, anillo de cumplimiento y % por hábito, **metas del mes con Sí / Regular / No** (con explicación cuando es «regular»), un momento memorable por día, calificación del mes y qué mejorar. Historial de meses anteriores. |
 | **Estadísticas** | Periodo seleccionable (mes, 3, 6, 12 meses, todo): cumplimiento por hábito, rachas, evolución de peso / sueño / nota, medias por día de la semana y mapa de calor del año. |
 | **Ajustes** | Nombre y lema, peso y sueño objetivo, umbral de "día cumplido", tema claro/oscuro, instalación de la PWA, exportar / importar copia (JSON) y borrar datos. |
 
-Estados de un hábito en un día: **hecho** (cuenta 1), **a medias** (cuenta 0,5), **no aplica** (no cuenta) y sin marcar (cuenta 0 si el día está registrado). El cumplimiento solo tiene en cuenta los días con algún registro.
+Estados de un hábito en un día: **hecho** (cuenta 1), **a medias** (cuenta 0,5), **no aplica** (no cuenta) y sin marcar (cuenta 0 si el día está registrado). El cumplimiento solo tiene en cuenta los días con algún registro; las tareas y los eventos no cuentan como registro.
 
 ## Tecnología
 
 - HTML, CSS y JavaScript (módulos ES) sin dependencias ni paso de build.
+- Paleta de rojos oscuros con tema claro y oscuro; colores de las gráficas validados para daltonismo y contraste.
 - Gráficas en SVG generadas a mano (`js/charts.js`), con tooltip al pasar el ratón y vista de tabla.
 - Datos en `localStorage` bajo la clave `habit-tracker:data` (`js/store.js`), con copia de seguridad en JSON.
 - PWA: `manifest.webmanifest` + `sw.js` (precaché de la app y estrategia *red primero, caché si falla*).
@@ -33,6 +34,8 @@ js/store.js           estado, persistencia, acciones y migración
 js/stats.js           cumplimiento, rachas, medias y series
 js/charts.js          gráficas SVG (línea, barras, mapa de calor, anillo, lista de barras)
 js/dayform.js         formulario de un día (usado en Hoy y en el editor modal)
+js/tasks.js           tareas del día
+js/events.js          eventos con horario
 js/views/*.js         una vista por sección
 ```
 

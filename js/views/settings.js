@@ -4,7 +4,7 @@ import { getState, setSetting, exportJSON, importJSON, resetAll, storageInfo, ha
 import { esc, icon, fmtNum, confirmDialog, toast } from '../ui.js';
 import { todayKey } from '../dates.js';
 
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 
 export function render(ctx) {
   const s = getState().settings;
@@ -68,7 +68,8 @@ export function render(ctx) {
 
         <div class="card">
           <div class="card-head"><h2>${icon('info')} Acerca de</h2></div>
-          <p class="muted">Versión digital del habit tracker de la libreta: hábitos en tres bloques, nota y peso diarios, sueño, metas del mes, un momento memorable por día, calificación mensual y qué mejorar el mes siguiente.</p>
+          <p class="muted">Habit Tracker es una aplicación personal para llevar el control de los hábitos del día a día y ver cómo evolucionan con el tiempo.</p>
+          <p class="muted">Cada día marcas tus hábitos (hecho, a medias o no aplica), apuntas la nota del día, el peso, las horas de sueño, un momento memorable y las tareas que tengas que hacer. En <b>Mensual</b> revisas el cumplimiento del mes, fijas metas y calificas cómo ha ido; en <b>Calendario</b> añades eventos con su horario; en <b>Estadísticas</b> ves rachas, medias y gráficas por periodo. Los datos se guardan en este dispositivo y puedes exportarlos desde aquí.</p>
         </div>
       </div>
     </section>`;
@@ -134,7 +135,7 @@ export function mount(root, ctx) {
   root.querySelector('[data-reset]')?.addEventListener('click', async () => {
     const ok = await confirmDialog({
       title: 'Borrar todos los datos',
-      message: 'Se eliminarán todos los registros, hábitos, metas y reflexiones de este dispositivo. Esta acción no se puede deshacer.',
+      message: 'Se eliminarán todos los registros, hábitos, tareas, eventos y metas de este dispositivo. Esta acción no se puede deshacer.',
       confirmText: 'Borrar todo',
     });
     if (ok) { resetAll(); ctx.applyTheme(); toast('Datos borrados'); }

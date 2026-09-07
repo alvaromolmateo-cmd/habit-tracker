@@ -85,9 +85,10 @@ export function bindDayForm(root) {
 }
 
 // Editor modal para cualquier fecha, con navegación día anterior / siguiente.
-export function openDayEditor(key) {
+export function openDayEditor(key, { onClose } = {}) {
   let current = key;
   openModal({
+    onClose,
     render: () => {
       const sub = isToday(current) ? 'Hoy' : isFuture(current) ? 'Día futuro' : `${parseKey(current).getFullYear()}`;
       const nav = `<div class="modal-nav">

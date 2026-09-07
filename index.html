@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Habit Tracker</title>
-  <meta name="description" content="Habit tracker personal: hábitos diarios, nota del día, peso, sueño, metas del mes y reflexiones.">
-  <meta name="theme-color" content="#fbfaf6">
+  <meta name="description" content="Habit Tracker: control personal de hábitos diarios, tareas, nota del día, peso, sueño, metas y eventos del mes.">
+  <meta name="theme-color" content="#fcf9f8">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Hábitos">
+  <meta name="apple-mobile-web-app-title" content="Habit Tracker">
   <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
@@ -44,6 +44,9 @@
     <symbol id="i-feather" viewBox="0 0 24 24"><path d="M5 20c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 20c3-5 6-8 10-11"/></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></symbol>
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></symbol>
   </svg>
 
   <div class="app">
@@ -57,7 +60,7 @@
         <a href="#/hoy" data-nav="hoy"><svg class="ic"><use href="#i-home"/></svg><span>Hoy</span></a>
         <a href="#/calendario" data-nav="calendario"><svg class="ic"><use href="#i-calendar"/></svg><span>Calendario</span></a>
         <a href="#/habitos" data-nav="habitos"><svg class="ic"><use href="#i-check-circle"/></svg><span>Hábitos</span></a>
-        <a href="#/reflexiones" data-nav="reflexiones"><svg class="ic"><use href="#i-book"/></svg><span>Reflexiones</span></a>
+        <a href="#/mensual" data-nav="mensual"><svg class="ic"><use href="#i-grid"/></svg><span>Mensual</span></a>
         <a href="#/estadisticas" data-nav="estadisticas"><svg class="ic"><use href="#i-chart"/></svg><span>Estadísticas</span></a>
       </nav>
       <div class="sidebar-foot">
@@ -73,7 +76,7 @@
       <a href="#/hoy" data-nav="hoy"><svg class="ic"><use href="#i-home"/></svg><span>Hoy</span></a>
       <a href="#/calendario" data-nav="calendario"><svg class="ic"><use href="#i-calendar"/></svg><span>Calendario</span></a>
       <a href="#/habitos" data-nav="habitos"><svg class="ic"><use href="#i-check-circle"/></svg><span>Hábitos</span></a>
-      <a href="#/reflexiones" data-nav="reflexiones"><svg class="ic"><use href="#i-book"/></svg><span>Reflexión</span></a>
+      <a href="#/mensual" data-nav="mensual"><svg class="ic"><use href="#i-grid"/></svg><span>Mensual</span></a>
       <a href="#/estadisticas" data-nav="estadisticas"><svg class="ic"><use href="#i-chart"/></svg><span>Stats</span></a>
       <a href="#/ajustes" data-nav="ajustes"><svg class="ic"><use href="#i-settings"/></svg><span>Ajustes</span></a>
     </nav>

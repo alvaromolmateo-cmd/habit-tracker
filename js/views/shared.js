@@ -1,49 +1,78 @@
-// Tarjetas compartidas entre vistas: metas del mes y revisión mensual.
+// Tarjetas compartidas: metas del mes y revisión mensual.
 
-import { getState, emptyMonth, cycleGoal, addGoal, removeGoal, updateGoal, setMonthField } from '../store.js';
+import { getState, emptyMonth, setGoalStatus, addGoal, removeGoal, updateGoal, setMonthField, GOAL_LABEL } from '../store.js';
 import { monthCompletion, metricAverage } from '../stats.js';
 import { esc, icon, fmtNum, fmtPct, progressBar } from '../ui.js';
 import { monthDays } from '../dates.js';
 
-export function goalsCard(state, ym, { editable = false } = {}) {
+export function goalSummary(goals) {
+  const done = goals.filter((g) => g.status === 'done').length;
+  const partial = goals.filter((g) => g.status === 'partial').length;
+  const fail = goals.filter((g) => g.status === 'fail').length;
+  const pct = goals.length ? ((done + partial * 0.5) / goals.length) * 100 : 0;
+  return { done, partial, fail, pct, total: goals.length };
+}
+
+export function goalSummaryLabel(goals) {
+  const s = goalSummary(goals);
+  if (!s.total) return 'Sin metas';
+  const parts = [];
+  if (s.done) parts.push(`${s.done} sí`);
+  if (s.partial) parts.push(`${s.partial} regular`);
+  if (s.fail) parts.push(`${s.fail} no`);
+  const pending = s.total - s.done - s.partial - s.fail;
+  if (pending) parts.push(`${pending} pendiente${pending === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}
+
+export function goalsCard(state, ym) {
   const month = state.months[ym] || emptyMonth();
   const goals = month.goals;
-  const done = goals.filter((g) => g.status === 'done').length;
-  const pct = goals.length ? (done / goals.length) * 100 : 0;
+  const s = goalSummary(goals);
   return `
     <div class="card card-goals">
       <div class="card-head">
         <h2>${icon('target')} Metas del mes</h2>
-        <span class="muted">${goals.length ? `${done} de ${goals.length} completada${goals.length === 1 ? '' : 's'}` : 'Sin metas'}</span>
+        <span class="muted">${goalSummaryLabel(goals)}</span>
       </div>
-      ${goals.length ? progressBar(pct) : ''}
+      ${goals.length ? progressBar(s.pct) : ''}
       <ul class="goals">
         ${goals.map((g, i) => `
           <li class="goal is-${g.status}">
-            <button type="button" class="goal-status" data-goal-cycle="${g.id}" title="Pendiente → Conseguida → No conseguida" aria-label="Cambiar estado de la meta">
-              ${g.status === 'done' ? icon('check') : g.status === 'fail' ? icon('x') : ''}
-            </button>
-            ${editable
-              ? `<input class="goal-input" data-goal-text="${g.id}" value="${esc(g.text)}" maxlength="120" aria-label="Texto de la meta">`
-              : `<span class="goal-text">${i + 1}. ${esc(g.text)}</span>`}
-            <button type="button" class="icon-btn sm goal-del" data-goal-del="${g.id}" title="Eliminar meta" aria-label="Eliminar meta">${icon('trash')}</button>
+            <span class="goal-num">${i + 1}.</span>
+            <input class="goal-input" data-goal-text="${g.id}" value="${esc(g.text)}" maxlength="120" aria-label="Texto de la meta">
+            <div class="seg sm goal-seg" role="group" aria-label="¿Conseguida?">
+              ${['done', 'partial', 'fail'].map((st) => `<button type="button" class="seg-btn st-${st} ${g.status === st ? 'on' : ''}" data-goal-set="${g.id}" data-status="${st}" aria-pressed="${g.status === st}">${GOAL_LABEL[st]}</button>`).join('')}
+            </div>
+            <button type="button" class="icon-btn sm danger goal-del" data-goal-del="${g.id}" title="Eliminar meta" aria-label="Eliminar meta">${icon('trash')}</button>
+            ${g.status === 'partial' ? `<input class="input goal-note" data-goal-note="${g.id}" value="${esc(g.note || '')}" maxlength="200" placeholder="¿Por qué regular? Explícalo en una línea…" aria-label="Explicación">` : ''}
           </li>`).join('')}
       </ul>
       <form class="goal-add" data-goal-add autocomplete="off">
-        <input class="input" name="text" placeholder="Nueva meta para este mes…" maxlength="120" required>
-        <button class="btn btn-ghost" type="submit" title="Añadir meta">${icon('plus')}</button>
+        <input class="input" name="text" placeholder="Nueva meta para este mes…" maxlength="120" required aria-label="Nueva meta">
+        <button class="btn btn-ghost" type="submit" title="Añadir meta" aria-label="Añadir meta">${icon('plus')}</button>
       </form>
+      <p class="hint">Marca cada meta con Sí, Regular o No. Con «Regular» puedes explicar qué pasó.</p>
     </div>`;
 }
 
 export function bindGoals(root, ym) {
-  root.querySelectorAll('[data-goal-cycle]').forEach((b) => b.addEventListener('click', () => cycleGoal(ym, b.dataset.goalCycle)));
+  root.querySelectorAll('[data-goal-set]').forEach((b) => b.addEventListener('click', () => {
+    setGoalStatus(ym, b.dataset.goalSet, b.dataset.status);
+    if (b.dataset.status === 'partial') {
+      requestAnimationFrame(() => root.querySelector(`[data-goal-note="${b.dataset.goalSet}"]`)?.focus());
+    }
+  }));
   root.querySelectorAll('[data-goal-del]').forEach((b) => b.addEventListener('click', () => removeGoal(ym, b.dataset.goalDel)));
   root.querySelectorAll('[data-goal-text]').forEach((inp) => inp.addEventListener('change', () => {
     const text = inp.value.trim();
-    if (text) updateGoal(ym, inp.dataset.goalText, { text });
+    if (text) updateGoal(ym, inp.dataset.goalText, { text }, { silent: true });
     else removeGoal(ym, inp.dataset.goalText);
   }));
+  root.querySelectorAll('[data-goal-note]').forEach((inp) => {
+    inp.addEventListener('change', () => updateGoal(ym, inp.dataset.goalNote, { note: inp.value.trim() }, { silent: true }));
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+  });
   root.querySelectorAll('[data-goal-add]').forEach((form) => form.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = form.text.value.trim();
@@ -66,7 +95,7 @@ export function reviewCard(state, ym) {
         <div>
           <div class="review-stats">
             <span>Cumplimiento <b>${fmtPct(mc.pct)}</b></span>
-            <span>Ánimo <b>${mood == null ? '—' : fmtNum(mood, 1)}</b></span>
+            <span>Nota media <b>${mood == null ? '—' : fmtNum(mood, 1)}</b></span>
             <span>Sueño <b>${sleep == null ? '—' : fmtNum(sleep, 1) + ' h'}</b></span>
             <span>Días <b>${mc.days}</b></span>
           </div>
@@ -89,5 +118,5 @@ export function bindReview(root, ym) {
     const cur = getState().months[ym]?.rating;
     setMonthField(ym, 'rating', cur === n ? null : n);
   }));
-  root.querySelectorAll('[data-improve]').forEach((t) => t.addEventListener('change', () => setMonthField(ym, 'improve', t.value)));
+  root.querySelectorAll('[data-improve]').forEach((t) => t.addEventListener('change', () => setMonthField(ym, 'improve', t.value, { silent: true })));
 }

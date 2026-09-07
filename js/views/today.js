@@ -104,7 +104,7 @@ export function render(ctx) {
   const weightSub = w.count
     ? `${fmtNum(w.first, 1)} → ${fmtNum(w.last, 1)} kg${goal ? ` · objetivo ${fmtNum(goal, 1)}` : ''}`
     : 'Sin pesajes este mes';
-  const weightValue = w.delta != null ? fmtDelta(w.delta, 'kg') : w.last != null ? `${fmtNum(w.last, 1)} <small>kg</small>` : '—';
+  const weightValue = w.delta ? fmtDelta(w.delta, 'kg') : w.last != null ? `${fmtNum(w.last, 1)} <small>kg</small>` : '—';
 
   return `
     <header class="page-head">

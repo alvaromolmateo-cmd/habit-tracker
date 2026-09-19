@@ -5,10 +5,12 @@ import { habitsBySection, dayCompletion } from './stats.js';
 import { esc, fmtNum, openModal, refreshModal, modalHeader, icon } from './ui.js';
 import { dayLabel, addDays, isToday, isFuture, parseKey, todayKey } from './dates.js';
 
-function habitRow(h, s) {
+// `withTime`: si algún hábito tiene hora, todas las filas reservan su hueco para que queden alineadas.
+function habitRow(h, s, withTime) {
   const btn = (state, label, glyph) => `<button type="button" class="st st-${state} ${s === state ? 'on' : ''}" data-habit="${h.id}" data-state="${state}" title="${label}" aria-label="${esc(h.name)}: ${label}" aria-pressed="${s === state}">${glyph}</button>`;
   return `
     <div class="hrow ${s ? 'is-' + s : ''}">
+      ${withTime ? (h.time ? `<time class="hrow-time" datetime="${esc(h.time)}">${esc(h.time)}</time>` : '<span class="hrow-time"></span>') : ''}
       <span class="hrow-emoji">${esc(h.emoji)}</span>
       <span class="hrow-name">${esc(h.name)}${h.description ? `<small>${esc(h.description)}</small>` : ''}</span>
       <div class="hstate" role="group" aria-label="${esc(h.name)}">
@@ -20,6 +22,7 @@ function habitRow(h, s) {
 export function dayFormHTML(state, key) {
   const day = state.days[key] || emptyDay();
   const groups = habitsBySection(state);
+  const withTime = groups.some((g) => g.habits.some((h) => h.time));
   const comp = dayCompletion(state, key);
   const mood = day.mood;
   return `
@@ -46,7 +49,7 @@ export function dayFormHTML(state, key) {
       ${groups.length ? groups.map((g) => `
         <div class="hsection">
           <div class="hsection-title">${g.section.emoji} ${esc(g.section.name)}</div>
-          ${g.habits.map((h) => habitRow(h, day.habits[h.id])).join('')}
+          ${g.habits.map((h) => habitRow(h, day.habits[h.id], withTime)).join('')}
         </div>`).join('') : '<p class="muted">No hay hábitos activos. Añádelos en la sección Hábitos.</p>'}
       <div class="metric">
         <label for="m-${key}">Momento memorable del día</label>

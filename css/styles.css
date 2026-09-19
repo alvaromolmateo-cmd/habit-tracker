@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Habit Tracker · estilos
+   HabitTracker · estilos
    Tokens → base → layout → componentes → vistas → responsive
    ========================================================================== */
 
@@ -254,6 +254,11 @@ small { font-size: 0.72em; font-weight: 500; color: var(--text-2); }
 .fld { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 12px; }
 .fld .input, .fld .select { font-weight: 400; color: var(--text); width: 100%; }
 .fld-emoji { width: 84px; flex: none; }
+.fld-hint { font-size: 12px; font-weight: 400; color: var(--muted); }
+.time-pick { display: flex; gap: 8px; align-items: center; }
+.time-pick .input { flex: 1; min-width: 0; max-width: 180px; }
+.time-pick .btn { flex: none; }
+.time-pick .btn.on { background: var(--primary-soft); border-color: var(--primary-soft-2); color: var(--primary-strong); }
 .form-row { display: flex; gap: 12px; }
 .form-row .fld { flex: 1; min-width: 0; }
 .form-row .grow { flex: 1; }
@@ -306,6 +311,9 @@ small { font-size: 0.72em; font-weight: 500; color: var(--text-2); }
 .hsection-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 6px 0 4px; border-bottom: 1px solid var(--line); margin-bottom: 2px; }
 .hrow { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
 .hrow:last-child { border-bottom: 0; }
+.hrow-time { width: 40px; flex: none; margin-right: -4px; font-size: 12.5px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.hrow.is-done .hrow-time { color: var(--primary-strong); }
+.hrow.is-na .hrow-time { color: var(--muted); }
 .hrow-emoji { width: 26px; text-align: center; font-size: 17px; flex: none; }
 .hrow-name { flex: 1; min-width: 0; font-size: 14.5px; display: flex; flex-direction: column; line-height: 1.25; }
 .hrow-name small { font-size: 11.5px; color: var(--muted); }
@@ -692,6 +700,7 @@ button.ev-main:hover { background: var(--surface-2); }
   .tile-sub { white-space: normal; }
   .metric-row { grid-template-columns: 1fr 1fr; gap: 8px; }
   .st { width: 32px; }
+  .hrow-time { width: 36px; font-size: 12px; }
   .btn-more { display: none; }
   .page-head-compact .month-title { font-size: 17px; }
   .page-head-compact .icon-btn { width: 34px; height: 34px; }

@@ -1,4 +1,4 @@
-# Habit Tracker
+# HabitTracker
 
 Aplicación personal (PWA) para llevar el control de los hábitos del día a día: hábitos en secciones, nota y peso diarios, horas de sueño, tareas del día, eventos con horario, metas del mes y revisión mensual. Se instala en el móvil y en el portátil, funciona sin conexión y guarda los datos en el propio dispositivo.
 
@@ -8,9 +8,9 @@ Aplicación personal (PWA) para llevar el control de los hábitos del día a dí
 
 | Vista | Contenido |
 |---|---|
-| **Hoy** | Resumen (racha, cumplimiento del mes, sueño de hoy, peso), registro de hoy (nota 1-10, peso, sueño, hábitos ✓ / ½ / —, momento memorable), **tareas del día** (listado que se va tachando, con los eventos de hoy) y gráficas del mes de peso, sueño y nota del día con su objetivo. |
+| **Hoy** | Resumen (racha, cumplimiento del mes, sueño de hoy, peso), registro de hoy (nota 1-10, peso, sueño, hábitos ✓ / ½ / — con su **hora del día** delante si la tienen, momento memorable), **tareas del día** (listado que se va tachando, con los eventos de hoy) y gráficas del mes de peso, sueño y nota del día con su objetivo. |
 | **Calendario** | Mes completo con el % de cada día, sus eventos y sus tareas. Cada día abre un panel tipo agenda: **eventos con hora de inicio y fin** (o de todo el día), tareas del día y acceso al registro de hábitos. Debajo, la lista de eventos del mes. |
-| **Hábitos** | Crear, editar, ordenar, archivar y eliminar hábitos, y **crear, renombrar, ordenar y eliminar secciones**. Muestra la racha actual y la mejor de cada hábito. |
+| **Hábitos** | Crear, editar, ordenar, archivar y eliminar hábitos, con una **hora fija del día opcional** («— Sin hora» si no la necesita), y **crear, renombrar, ordenar y eliminar secciones**. Muestra la racha actual y la mejor de cada hábito. |
 | **Mensual** | Cuadrícula de todos los hábitos × días del mes, anillo de cumplimiento y % por hábito, **metas del mes con Sí / Regular / No** (con explicación cuando es «regular»), un momento memorable por día, calificación del mes y qué mejorar. Historial de meses anteriores. |
 | **Estadísticas** | Periodo seleccionable (mes, 3, 6, 12 meses, todo): cumplimiento por hábito, rachas, evolución de peso / sueño / nota, medias por día de la semana y mapa de calor del año. |
 | **Ajustes** | Nombre y lema, peso y sueño objetivo, umbral de "día cumplido", tema claro/oscuro, instalación de la PWA, exportar / importar copia (JSON) y borrar datos. |
@@ -73,5 +73,7 @@ GitHub Pages sirve la rama `main` desde la raíz. Al hacer push, la app se actua
 ## Pendiente / ideas
 
 - Sincronización entre dispositivos (ahora: exportar en uno e importar en otro).
-- Recordatorio diario (notificaciones).
+- Avisos en el móvil a la hora de cada hábito y antes de los eventos. Necesitan un servidor pequeño de Web Push,
+  porque una web no puede programar una notificación para cuando esté cerrada; en iPhone, solo con la app
+  instalada en la pantalla de inicio.
 - Hábitos con días de la semana concretos y hábitos numéricos (p. ej. pasos reales).

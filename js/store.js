@@ -5,7 +5,8 @@ import { uid } from './ui.js';
 import { todayKey } from './dates.js';
 
 const STORAGE_KEY = 'habit-tracker:data';
-export const DATA_VERSION = 2;
+// v3: cada hábito puede llevar una hora fija del día (`time`, 'HH:MM' o '' si no tiene).
+export const DATA_VERSION = 3;
 
 export const DEFAULT_SECTIONS = [
   { id: 'fisico', name: 'Físico y salud', emoji: '💪' },
@@ -52,7 +53,7 @@ export function defaultState() {
     createdAt: new Date().toISOString(),
     sections: defaultSections(),
     habits: DEFAULT_HABITS.map(([name, emoji, section], i) => ({
-      id: uid(), name, emoji, section, description: '', order: i, archived: false, createdAt: todayKey(),
+      id: uid(), name, emoji, section, description: '', time: '', order: i, archived: false, createdAt: todayKey(),
     })),
     days: {},
     months: {},
@@ -82,6 +83,7 @@ function migrate(data) {
     emoji: h.emoji || '✅',
     section: out.sections.some((s) => s.id === h.section) ? h.section : firstSection,
     description: h.description || '',
+    time: cleanTime(h.time),
     order: h.order ?? i,
     archived: !!h.archived,
     createdAt: h.createdAt || todayKey(),
@@ -403,11 +405,11 @@ export function removeSection(id) {
 }
 
 // ---------- Acciones de hábitos ----------
-export function addHabit({ name, emoji, section, description }) {
+export function addHabit({ name, emoji, section, description, time }) {
   update((st) => {
     const order = Math.max(-1, ...st.habits.filter((h) => h.section === section).map((h) => h.order)) + 1;
     st.habits.push({
-      id: uid(), name, emoji: emoji || '✅', section, description: description || '', order, archived: false, createdAt: todayKey(),
+      id: uid(), name, emoji: emoji || '✅', section, description: description || '', time: cleanTime(time), order, archived: false, createdAt: todayKey(),
     });
   });
 }
@@ -415,7 +417,7 @@ export function addHabit({ name, emoji, section, description }) {
 export function updateHabit(id, patch) {
   update((st) => {
     const h = st.habits.find((x) => x.id === id);
-    if (h) Object.assign(h, patch);
+    if (h) Object.assign(h, 'time' in patch ? { ...patch, time: cleanTime(patch.time) } : patch);
   });
 }
 

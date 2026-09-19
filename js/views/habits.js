@@ -6,10 +6,11 @@ import { esc, icon, openModal, closeModal, modalHeader, confirmDialog, toast } f
 
 function row(h, i, n, state) {
   const s = habitStreaks(state, h.id);
+  const meta = [h.time, h.description].filter(Boolean).join(' · ');
   return `
     <li class="habit-item">
       <span class="habit-emoji">${esc(h.emoji)}</span>
-      <span class="habit-name">${esc(h.name)}${h.description ? `<small>${esc(h.description)}</small>` : ''}</span>
+      <span class="habit-name">${esc(h.name)}${meta ? `<small>${esc(meta)}</small>` : ''}</span>
       <span class="habit-streak" title="Racha actual / mejor racha">${icon('flame')} ${s.current} <small>/ ${s.best}</small></span>
       <span class="habit-actions">
         <button type="button" class="icon-btn sm" data-move="-1" data-id="${h.id}" ${i === 0 ? 'disabled' : ''} title="Subir" aria-label="Subir">${icon('arrow-up')}</button>
@@ -92,7 +93,15 @@ function openHabitForm(habit, sectionId) {
             ${sections.map((s) => `<option value="${s.id}" ${selected === s.id ? 'selected' : ''}>${esc(s.emoji)} ${esc(s.name)}</option>`).join('')}
           </select>
         </label>
-        <label class="fld">Descripción (opcional)<input class="input" name="description" value="${esc(habit?.description || '')}" maxlength="80" placeholder="p. ej. mínimo 10.000 pasos"></label>
+        <div class="fld">
+          <label for="habit-time">Hora</label>
+          <div class="time-pick">
+            <input id="habit-time" class="input" type="time" name="time" value="${esc(habit?.time || '')}">
+            <button type="button" class="btn sm${habit?.time ? '' : ' on'}" data-no-time aria-pressed="${!habit?.time}">— Sin hora</button>
+          </div>
+          <span class="fld-hint">Una hora fija del día, que sale delante del hábito en Hoy. Si no la necesita, déjalo sin hora.</span>
+        </div>
+        <label class="fld">Descripción opcional<input class="input" name="description" value="${esc(habit?.description || '')}" maxlength="80" placeholder="p. ej. mínimo 10.000 pasos"></label>
         <div class="modal-foot">
           <button type="button" class="btn" data-modal-close>Cancelar</button>
           <button class="btn btn-primary" type="submit">Guardar</button>
@@ -100,12 +109,24 @@ function openHabitForm(habit, sectionId) {
       </form>`,
     mount: (panel) => {
       const form = panel.querySelector('form');
+      // «— Sin hora» vacía la hora; en cuanto se elige una, deja de estar marcado.
+      const noTime = form.querySelector('[data-no-time]');
+      const syncNoTime = () => {
+        const none = !form.time.value;
+        noTime.classList.toggle('on', none);
+        noTime.setAttribute('aria-pressed', String(none));
+      };
+      form.time.addEventListener('input', syncNoTime);
+      form.time.addEventListener('change', syncNoTime);
+      noTime.addEventListener('click', () => { form.time.value = ''; syncNoTime(); });
+
       form.addEventListener('submit', (e) => {
         e.preventDefault();
         const data = {
           name: form.name.value.trim(),
           emoji: form.emoji.value.trim() || '✅',
           section: form.section.value,
+          time: form.time.value,
           description: form.description.value.trim(),
         };
         if (!data.name) return;

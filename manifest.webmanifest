@@ -1,6 +1,6 @@
 {
-  "name": "Habit Tracker",
-  "short_name": "Habit Tracker",
+  "name": "HabitTracker",
+  "short_name": "HabitTracker",
   "description": "Control personal de hábitos diarios, tareas, nota del día, peso, sueño, metas y eventos del mes.",
   "lang": "es",
   "start_url": "./",

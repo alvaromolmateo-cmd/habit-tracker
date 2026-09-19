@@ -4,7 +4,7 @@ import { getState, setSetting, exportJSON, importJSON, resetAll, storageInfo, ha
 import { esc, icon, fmtNum, confirmDialog, toast } from '../ui.js';
 import { todayKey } from '../dates.js';
 
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.3.0';
 
 // Descarga un texto como archivo .json.
 function download(text, name) {
@@ -103,7 +103,7 @@ export function render(ctx) {
 
         <div class="card">
           <div class="card-head"><h2>${icon('info')} Acerca de</h2></div>
-          <p class="muted">Habit Tracker es una aplicación personal para llevar el control de los hábitos del día a día y ver cómo evolucionan con el tiempo.</p>
+          <p class="muted">HabitTracker es una aplicación personal para llevar el control de los hábitos del día a día y ver cómo evolucionan con el tiempo.</p>
           <p class="muted">Cada día marcas tus hábitos (hecho, a medias o no aplica), apuntas la nota del día, el peso, las horas de sueño, un momento memorable y las tareas que tengas que hacer. En <b>Mensual</b> revisas el cumplimiento del mes, fijas metas y calificas cómo ha ido; en <b>Calendario</b> añades eventos con su horario; en <b>Estadísticas</b> ves rachas, medias y gráficas por periodo. Los datos se guardan en este dispositivo y puedes exportarlos desde aquí.</p>
         </div>
       </div>

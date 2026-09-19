@@ -70,7 +70,7 @@ function render() {
     a.classList.toggle('active', on);
     if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
-  document.title = `${titles[route]} · Habit Tracker`;
+  document.title = `${titles[route]} · HabitTracker`;
   refreshShell();
 
   if (route !== lastRoute) {

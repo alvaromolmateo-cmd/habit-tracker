@@ -1,10 +1,44 @@
 // Ajustes: perfil, objetivos, apariencia, instalación de la PWA y copia de seguridad de los datos.
 
-import { getState, setSetting, exportJSON, importJSON, resetAll, storageInfo, hasSaveError } from '../store.js';
+import { getState, setSetting, exportJSON, importJSON, resetAll, storageInfo, hasSaveError, safetyCopies, discardSafetyCopy } from '../store.js';
 import { esc, icon, fmtNum, confirmDialog, toast } from '../ui.js';
 import { todayKey } from '../dates.js';
 
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
+
+// Descarga un texto como archivo .json.
+function download(text, name) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+const fileDate = (iso) => (iso || new Date().toISOString()).slice(0, 10);
+const longDate = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+
+// Copias automáticas de la red de seguridad del almacenamiento (ver store.js).
+function safetyBlock() {
+  const { backup, rescues, readOnly } = safetyCopies();
+  if (!backup && !rescues.length && !readOnly) return '';
+  return `
+    ${readOnly ? '<p class="warn">Los datos guardados no se pudieron abrir y no hay sitio para apartarlos, así que la app no guarda nada para no pisarlos. Libera espacio antes de seguir.</p>' : ''}
+    ${rescues.length ? `
+      <p class="warn">Hay datos antiguos que la app no pudo abrir. No se han borrado: están apartados aquí. Descárgalos y guárdalos; se podrán importar cuando se corrija el fallo.</p>
+      <div class="btn-row">
+        <button class="btn" data-rescue-get>${icon('download')} Descargar datos apartados</button>
+        <button class="btn btn-danger-ghost" data-rescue-drop>${icon('trash')} Descartar</button>
+      </div>` : ''}
+    ${backup ? `
+      <p class="hint">Copia automática de antes de la última actualización de la app (${esc(longDate(backup.savedAt))}). Solo hace falta si algo se ve raro tras actualizar.</p>
+      <div class="btn-row">
+        <button class="btn" data-backup-get>${icon('download')} Descargar copia automática</button>
+      </div>` : ''}`;
+}
 
 export function render(ctx) {
   const s = getState().settings;
@@ -63,6 +97,7 @@ export function render(ctx) {
             <input type="file" accept="application/json,.json" data-import-file hidden>
           </div>
           <p class="hint">Exporta desde el portátil e importa en el móvil (o al revés) para llevar los mismos datos. La importación sustituye todo lo que haya aquí.</p>
+          ${safetyBlock()}
           <button class="btn btn-danger-ghost" data-reset>${icon('trash')} Borrar todos los datos</button>
         </div>
 
@@ -99,15 +134,23 @@ export function mount(root, ctx) {
   }));
   root.querySelector('[data-install]')?.addEventListener('click', () => ctx.install());
   root.querySelector('[data-export]')?.addEventListener('click', () => {
-    const blob = new Blob([exportJSON()], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `habit-tracker-${todayKey()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    download(exportJSON(), `habit-tracker-${todayKey()}.json`);
     toast('Copia exportada');
+  });
+  root.querySelector('[data-backup-get]')?.addEventListener('click', () => {
+    const { backup } = safetyCopies();
+    if (backup) download(backup.raw, `habit-tracker-copia-${fileDate(backup.savedAt)}.json`);
+  });
+  root.querySelector('[data-rescue-get]')?.addEventListener('click', () => {
+    safetyCopies().rescues.forEach((r, i) => download(r.raw, `habit-tracker-apartados-${fileDate(r.savedAt)}-${i + 1}.json`));
+  });
+  root.querySelector('[data-rescue-drop]')?.addEventListener('click', async () => {
+    const ok = await confirmDialog({
+      title: 'Descartar datos apartados',
+      message: 'Se borran para siempre los datos que la app no pudo abrir. Descárgalos antes si hay algo que quieras conservar.',
+      confirmText: 'Descartar',
+    });
+    if (ok) { discardSafetyCopy('rescue'); ctx.rerender(); toast('Datos apartados descartados'); }
   });
   const fileInput = root.querySelector('[data-import-file]');
   root.querySelector('[data-import]')?.addEventListener('click', () => fileInput.click());

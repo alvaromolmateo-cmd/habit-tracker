@@ -116,14 +116,79 @@ function migrate(data) {
   return out;
 }
 
-function load() {
+// ---------- Carga y guardado ----------
+// Red de seguridad: lo guardado no se pisa sin dejar copia.
+// - Si los datos vienen de otra versión de la app, antes de adaptarlos se guarda una copia tal cual
+//   (`:copia`), por si la actualización trajera algún fallo.
+// - Si no se pueden leer, se apartan en `:rescate` y la app arranca en blanco; ahí se quedan hasta
+//   que se descarguen o se descarten desde Ajustes. Si ni siquiera se pueden apartar, no se guarda
+//   nada para no pisarlos.
+const BACKUP_KEY = `${STORAGE_KEY}:copia`;
+const RESCUE_KEY = `${STORAGE_KEY}:rescate`;
+let readOnly = false;
+export let rescuedOnLoad = false;
+
+const stamp = (raw, version) => ({ savedAt: new Date().toISOString(), version, raw });
+
+function readRescues() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return migrate(JSON.parse(raw));
-  } catch (e) {
-    console.warn('No se pudo leer el estado guardado, se empieza de cero', e);
+    const list = JSON.parse(localStorage.getItem(RESCUE_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
   }
-  return defaultState();
+}
+
+function load() {
+  let raw = null;
+  try {
+    raw = localStorage.getItem(STORAGE_KEY);
+  } catch (e) {
+    console.warn('No se pudo leer el almacenamiento', e);
+    return defaultState();
+  }
+  if (!raw) return defaultState();
+
+  let version = null;
+  try {
+    const data = JSON.parse(raw);
+    version = Number(data?.version) || 1;
+    if (version !== DATA_VERSION) {
+      try {
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(stamp(raw, version)));
+      } catch (e) {
+        console.warn('No se pudo guardar la copia previa a la actualización', e);
+      }
+    }
+    return migrate(data);
+  } catch (e) {
+    console.warn('No se pudieron leer los datos guardados; se apartan sin tocarlos', e);
+    try {
+      const rescues = readRescues();
+      // Si ya estaban apartados (se ha recargado sin tocar nada), no se duplican.
+      if (!rescues.some((r) => r.raw === raw)) {
+        localStorage.setItem(RESCUE_KEY, JSON.stringify([...rescues, stamp(raw, version)]));
+      }
+      rescuedOnLoad = true;
+    } catch {
+      readOnly = true;
+    }
+    return defaultState();
+  }
+}
+
+// Pide al navegador que no borre estos datos cuando ande justo de espacio (Safari, sobre todo).
+try { navigator.storage?.persist?.()?.catch?.(() => {}); } catch { /* sin soporte */ }
+
+// Copias que guarda la red de seguridad, para descargarlas o descartarlas desde Ajustes.
+export function safetyCopies() {
+  let backup = null;
+  try { backup = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null'); } catch { /* ilegible */ }
+  return { backup, rescues: readRescues(), readOnly };
+}
+
+export function discardSafetyCopy(kind) {
+  try { localStorage.removeItem(kind === 'rescue' ? RESCUE_KEY : BACKUP_KEY); } catch { /* sin acceso */ }
 }
 
 let state = load();
@@ -131,6 +196,7 @@ const listeners = new Set();
 let saveError = false;
 
 function save() {
+  if (readOnly) { saveError = true; return; }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     saveError = false;

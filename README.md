@@ -39,6 +39,18 @@ js/events.js          eventos con horario
 js/views/*.js         una vista por sección
 ```
 
+## Tus datos entre versiones
+
+Todo se guarda en el propio navegador; actualizar la app no borra nada:
+
+- Los hábitos y secciones de ejemplo solo se crean la primera vez, cuando no hay nada guardado.
+- Cuando cambia la estructura de los datos, la app los adapta (`migrate` en `js/store.js`) y antes guarda una
+  **copia automática** tal cual estaban (`habit-tracker:data:copia`), que se descarga desde Ajustes → Datos.
+- Si algún día no pudiera leerlos, los **aparta sin borrarlos** (`habit-tracker:data:rescate`) en vez de empezar
+  encima, y avisa.
+- Pide al navegador almacenamiento persistente para que no los borre cuando ande justo de espacio. Aun así, en
+  iPhone conviene instalarla en la pantalla de inicio y exportar una copia de vez en cuando.
+
 ## Ejecutar en local
 
 Cualquier servidor estático vale (los módulos ES no cargan desde `file://`):

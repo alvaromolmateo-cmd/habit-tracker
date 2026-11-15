@@ -1,12 +1,16 @@
 // Vista Mensual: cuadrícula de hábitos del mes, cumplimiento, metas, momentos memorables, revisión y meses anteriores.
 
-import { getState, setMetric, setMemorableLate, cycleHabit, dayHasData, STATE_LABEL } from '../store.js';
+import { getState, setMetric, setMemorableLate, cycleHabit, toggleTarget, dayHasData, STATE_LABEL } from '../store.js';
 import { activeHabits, habitsBySection, monthCompletion, habitCompletion, metricAverage, monthsWithData, targetOutcome, targetSummary, targetSummaryLabel, TARGET_LABEL } from '../stats.js';
 import { esc, icon, fmtNum, fmtPct, monthNav } from '../ui.js';
 import { ring, barList } from '../charts.js';
 import { openDayEditor, lateMemoLabel } from '../dayform.js';
 import { monthDays, monthLabel, dayLabel, dayNum, isFuture, isToday, addMonths, weekdayIdx, WEEKDAYS_SHORT } from '../dates.js';
 import { goalsCard, bindGoals, reviewCard, bindReview, goalSummaryLabel } from './shared.js';
+
+// Qué hace tocar una casilla: 'log' cambia su estado (hecho, a medias…) y 'target' la marca o desmarca
+// como objetivo de ese día, para planificar objetivos de días pasados o futuros. Se mantiene al redibujar.
+let gridMode = 'log';
 
 function habitGrid(state, keys, groups) {
   const head = keys.map((k) => {
@@ -33,7 +37,7 @@ function habitGrid(state, keys, groups) {
           const day = state.days[k];
           const s = day?.habits?.[h.id] || '';
           const tgt = day?.targets?.[h.id] ? targetOutcome(state, k, h.id) : null;
-          const cls = (s || (isFuture(k) ? 'future' : dayHasData(day) ? 'empty' : 'nolog')) + (tgt ? ' target' : '');
+          const cls = (s || (isFuture(k) ? 'future' : dayHasData(day) ? 'empty' : 'nolog')) + (tgt ? ` target t-${tgt}` : '');
           const label = `${h.name}, día ${dayNum(k)}: ${STATE_LABEL[s] || 'sin marcar'}${tgt ? ` · objetivo del día (${TARGET_LABEL[tgt].toLowerCase()})` : ''}`;
           return `<td class="${isToday(k) ? 'is-today' : ''}"><button type="button" class="cell ${cls}" data-cell data-key="${k}" data-habit="${h.id}" aria-label="${esc(label)}" ${tgt ? `title="Objetivo del día · ${TARGET_LABEL[tgt]}"` : ''}></button></td>`;
         }).join('')}
@@ -80,20 +84,26 @@ export function render(ctx) {
       <div class="page-actions"><span class="muted">${mc.days} día${mc.days === 1 ? '' : 's'} registrado${mc.days === 1 ? '' : 's'} · ${fmtPct(mc.pct)}</span></div>
     </header>
 
-    <div class="card card-grid">
+    <div class="card card-grid ${gridMode === 'target' ? 'is-target-mode' : ''}">
       <div class="card-head">
         <h2>${icon('grid')} Hábitos del mes</h2>
+        <div class="seg sm grid-mode" role="group" aria-label="Al tocar una casilla">
+          <button type="button" class="seg-btn ${gridMode === 'log' ? 'on' : ''}" data-grid-mode="log" aria-pressed="${gridMode === 'log'}">${icon('check', 'ic-inline')} Registrar</button>
+          <button type="button" class="seg-btn ${gridMode === 'target' ? 'on' : ''}" data-grid-mode="target" aria-pressed="${gridMode === 'target'}">${icon('target', 'ic-inline')} Objetivos</button>
+        </div>
         <div class="legend">
           <span><i class="cell done"></i> Hecho</span>
           <span><i class="cell partial"></i> A medias</span>
           <span><i class="cell na"></i> No aplica</span>
           <span><i class="cell empty"></i> No hecho</span>
           <span><i class="cell empty target"></i> Objetivo del día</span>
+          <span><i class="cell empty target t-missed"></i> Objetivo no hecho</span>
         </div>
       </div>
       ${groups.length ? habitGrid(state, keys, groups) : '<p class="muted">No hay hábitos activos. Añádelos en la sección Hábitos.</p>'}
       ${targets.total ? `<p class="tgt-month">${icon('target')} <span><b>Objetivos del día este mes:</b> ${esc(targetSummaryLabel(targets))}</span></p>` : ''}
-      <p class="hint">Toca una casilla para cambiar su estado. Las métricas se editan pulsando sobre el día; desde ahí también marcas un hábito como objetivo del día con ${icon('target', 'ic-inline')}.</p>
+      <p class="hint hint-log">Toca una casilla para cambiar su estado. Las métricas se editan pulsando sobre el día. Para planificar objetivos, cambia a «Objetivos».</p>
+      <p class="hint hint-target">Toca una casilla para marcarla o quitarla como objetivo de ese día, también en días futuros. Si el día pasa sin registrarlo, queda como «No hecho» hasta que lo anotes.</p>
     </div>
 
     <section class="grid-2">
@@ -159,7 +169,19 @@ function memoLateBtn(k, day) {
 export function mount(root, ctx) {
   root.querySelectorAll('[data-month]').forEach((b) => b.addEventListener('click', () => ctx.setMonth(addMonths(ctx.month, Number(b.dataset.month)))));
   root.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => { ctx.setMonth(b.dataset.goto); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
-  root.querySelectorAll('[data-cell]').forEach((b) => b.addEventListener('click', () => cycleHabit(b.dataset.key, b.dataset.habit)));
+  root.querySelectorAll('[data-cell]').forEach((b) => b.addEventListener('click', () => {
+    if (gridMode === 'target') toggleTarget(b.dataset.key, b.dataset.habit);
+    else cycleHabit(b.dataset.key, b.dataset.habit);
+  }));
+  // Cambiar de modo no toca los datos: solo cambia el aspecto de la tarjeta y lo que hace tocar una casilla.
+  root.querySelectorAll('[data-grid-mode]').forEach((b) => b.addEventListener('click', () => {
+    gridMode = b.dataset.gridMode;
+    root.querySelector('.card-grid')?.classList.toggle('is-target-mode', gridMode === 'target');
+    root.querySelectorAll('[data-grid-mode]').forEach((x) => {
+      x.classList.toggle('on', x === b);
+      x.setAttribute('aria-pressed', String(x === b));
+    });
+  }));
   root.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openDayEditor(b.dataset.open)));
   root.querySelectorAll('[data-memo]').forEach((inp) => {
     // Se guarda sin redibujar (para no perder el foco al pasar de un día a otro) y se actualiza solo su marca.

@@ -425,6 +425,17 @@ small { font-size: 0.72em; font-weight: 500; color: var(--text-2); }
 .cell.nolog { opacity: 0.45; }
 .cell.future { border-style: dashed; opacity: 0.35; }
 .cell.target { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--blue); opacity: 1; }
+.cell.target.t-missed { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--red); }
+/* Modo Objetivos de la cuadrícula mensual */
+.card-grid .card-head { flex-wrap: wrap; gap: 8px 12px; }
+.grid-mode .seg-btn { display: inline-flex; align-items: center; gap: 4px; }
+.card-grid.is-target-mode .grid-mode [data-grid-mode="target"].on { background: var(--blue); color: #fff; }
+.card-grid.is-target-mode .hgrid-wrap { border-radius: 10px; box-shadow: inset 0 0 0 1.5px var(--blue); }
+.card-grid.is-target-mode .cell:hover { border-color: var(--blue); }
+.card-grid.is-target-mode .cell.future { opacity: 0.7; }
+.card-grid .hint-target { display: none; }
+.card-grid.is-target-mode .hint-target { display: block; color: var(--blue); }
+.card-grid.is-target-mode .hint-log { display: none; }
 
 /* Anillo + lista de barras */
 .ring-row { display: flex; gap: 18px; align-items: center; }

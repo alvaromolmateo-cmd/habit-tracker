@@ -340,10 +340,8 @@ small { font-size: 0.72em; font-weight: 500; color: var(--text-2); }
 .tgt-tag.tgt-partial { background: var(--accent); border-color: var(--accent); color: #fff; }
 .tgt-tag.tgt-na { background: var(--surface-3); border-color: var(--line-2); color: var(--text-2); }
 .tgt-tag.tgt-missed { background: var(--surface); border-color: var(--line-2); color: var(--muted); text-decoration: line-through; }
-.tgt-foot, .tgt-month { display: inline-flex; align-items: center; gap: 5px; color: var(--blue); font-weight: 600; }
-.tgt-foot .ic, .tgt-month .ic { width: 15px; height: 15px; }
-.tgt-month { font-size: 13px; margin: 10px 0 0; gap: 6px; }
-.tgt-month b { color: var(--text); }
+.tgt-foot { display: inline-flex; align-items: center; gap: 5px; color: var(--blue); font-weight: 600; }
+.tgt-foot .ic { width: 15px; height: 15px; }
 .tgt-list-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--blue); margin: 10px 0 4px; }
 .tgt-list-title .ic { width: 15px; height: 15px; }
 .tgt-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; }

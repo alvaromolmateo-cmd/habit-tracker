@@ -4,7 +4,7 @@ import { getState, setSetting, exportJSON, importJSON, resetAll, storageInfo, ha
 import { esc, icon, fmtNum, confirmDialog, toast } from '../ui.js';
 import { todayKey } from '../dates.js';
 
-export const APP_VERSION = '1.4.1';
+export const APP_VERSION = '1.4.2';
 
 // Descarga un texto como archivo .json.
 function download(text, name) {

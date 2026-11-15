@@ -1,7 +1,7 @@
 // Vista Mensual: cuadrícula de hábitos del mes, cumplimiento, metas, momentos memorables, revisión y meses anteriores.
 
 import { getState, setMetric, setMemorableLate, cycleHabit, toggleTarget, dayHasData, STATE_LABEL } from '../store.js';
-import { activeHabits, habitsBySection, monthCompletion, habitCompletion, metricAverage, monthsWithData, targetOutcome, targetSummary, targetSummaryLabel, TARGET_LABEL } from '../stats.js';
+import { activeHabits, habitsBySection, monthCompletion, habitCompletion, metricAverage, monthsWithData, targetOutcome, TARGET_LABEL } from '../stats.js';
 import { esc, icon, fmtNum, fmtPct, monthNav } from '../ui.js';
 import { ring, barList } from '../charts.js';
 import { openDayEditor, lateMemoLabel } from '../dayform.js';
@@ -71,7 +71,6 @@ export function render(ctx) {
   const groups = habitsBySection(state);
   const mc = monthCompletion(state, ym);
   const history = monthsWithData(state).filter((m) => m !== ym).reverse();
-  const targets = targetSummary(state, keys);
 
   const items = habits.map((h) => {
     const c = habitCompletion(state, keys, h.id);
@@ -101,7 +100,6 @@ export function render(ctx) {
         </div>
       </div>
       ${groups.length ? habitGrid(state, keys, groups) : '<p class="muted">No hay hábitos activos. Añádelos en la sección Hábitos.</p>'}
-      ${targets.total ? `<p class="tgt-month">${icon('target')} <span><b>Objetivos del día este mes:</b> ${esc(targetSummaryLabel(targets))}</span></p>` : ''}
       <p class="hint hint-log">Toca una casilla para cambiar su estado. Las métricas se editan pulsando sobre el día. Para planificar objetivos, cambia a «Objetivos».</p>
       <p class="hint hint-target">Toca una casilla para marcarla o quitarla como objetivo de ese día, también en días futuros. Si el día pasa sin registrarlo, queda como «No hecho» hasta que lo anotes.</p>
     </div>

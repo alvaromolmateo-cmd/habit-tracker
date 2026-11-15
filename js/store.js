@@ -6,7 +6,9 @@ import { todayKey } from './dates.js';
 
 const STORAGE_KEY = 'habit-tracker:data';
 // v3: cada hábito puede llevar una hora fija del día (`time`, 'HH:MM' o '' si no tiene).
-export const DATA_VERSION = 3;
+// v4: cada día puede marcar hábitos como objetivo (`targets`) y el momento memorable puede quedar
+//     señalado como escrito más tarde (`memorableLate` + `memorableWrittenOn`).
+export const DATA_VERSION = 4;
 
 export const DEFAULT_SECTIONS = [
   { id: 'fisico', name: 'Físico y salud', emoji: '💪' },
@@ -61,11 +63,15 @@ export function defaultState() {
   };
 }
 
-export const emptyDay = () => ({ mood: null, weight: null, sleep: null, memorable: '', habits: {}, tasks: [], events: [] });
+export const emptyDay = () => ({
+  mood: null, weight: null, sleep: null, memorable: '', memorableLate: false, memorableWrittenOn: '',
+  habits: {}, targets: {}, tasks: [], events: [],
+});
 export const emptyMonth = () => ({ goals: [], rating: null, improve: '' });
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const cleanTime = (t) => (typeof t === 'string' && TIME_RE.test(t) ? t : '');
+const KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function migrate(data) {
   if (!data || typeof data !== 'object') throw new Error('Formato no válido');
@@ -92,6 +98,11 @@ function migrate(data) {
   out.days = data.days && typeof data.days === 'object' ? data.days : {};
   for (const k of Object.keys(out.days)) {
     const d = { ...emptyDay(), ...out.days[k], habits: { ...(out.days[k].habits || {}) } };
+    const targets = d.targets && typeof d.targets === 'object' ? d.targets : {};
+    d.targets = Object.fromEntries(Object.keys(targets).filter((id) => targets[id]).map((id) => [id, true]));
+    d.memorable = String(d.memorable || '');
+    d.memorableLate = !!d.memorableLate && d.memorable.trim() !== '';
+    d.memorableWrittenOn = d.memorableLate && KEY_RE.test(d.memorableWrittenOn) ? d.memorableWrittenOn : '';
     d.tasks = (Array.isArray(d.tasks) ? d.tasks : [])
       .map((t) => ({ id: t.id || uid(), text: String(t.text || '').trim(), done: !!t.done }))
       .filter((t) => t.text);
@@ -244,9 +255,11 @@ export function dayHasData(day) {
     || (day.memorable || '').trim() !== '' || Object.keys(day.habits || {}).length > 0;
 }
 
-// Un día se puede borrar del almacén cuando no tiene registro, ni tareas, ni eventos.
+// Un día se puede borrar del almacén cuando no tiene registro, ni objetivos, ni tareas, ni eventos.
+// Los objetivos no cuentan como registro: marcar algo como objetivo no es haberlo hecho ni dejado de hacer.
 export function dayIsEmpty(day) {
-  return !dayHasData(day) && !(day?.tasks || []).length && !(day?.events || []).length;
+  return !dayHasData(day) && !Object.keys(day?.targets || {}).length
+    && !(day?.tasks || []).length && !(day?.events || []).length;
 }
 
 function tidyDay(st, key) {
@@ -262,6 +275,15 @@ export function setHabit(key, habitId, value) {
   });
 }
 
+// Objetivo del día: resalta el hábito ese día sin registrarlo todavía como hecho, a medias o no aplica.
+export function toggleTarget(key, habitId) {
+  update((st) => {
+    const day = ensureDay(st, key);
+    if (day.targets[habitId]) delete day.targets[habitId]; else day.targets[habitId] = true;
+    tidyDay(st, key);
+  });
+}
+
 export function cycleHabit(key, habitId) {
   const cur = state.days[key]?.habits?.[habitId] || null;
   const order = [null, 'done', 'partial', 'na'];
@@ -272,10 +294,35 @@ export function cycleHabit(key, habitId) {
 export function setMetric(key, field, value, opts) {
   update((st) => {
     const day = ensureDay(st, key);
-    if (field === 'memorable') day.memorable = value || '';
+    if (field === 'memorable') setMemorable(day, key, value);
     else day[field] = value === '' || value == null || Number.isNaN(Number(value)) ? null : Number(value);
     tidyDay(st, key);
   }, opts);
+}
+
+// Si el momento memorable de un día pasado se escribe por primera vez otro día, queda marcado como
+// «escrito más tarde» con la fecha en que se escribió. Retocar uno que ya estaba no lo marca.
+function setMemorable(day, key, value) {
+  const text = String(value || '');
+  const wasEmpty = !(day.memorable || '').trim();
+  day.memorable = text;
+  if (!text.trim()) {
+    day.memorableLate = false;
+    day.memorableWrittenOn = '';
+  } else if (wasEmpty && key < todayKey()) {
+    day.memorableLate = true;
+    day.memorableWrittenOn = todayKey();
+  }
+}
+
+// Marca o desmarca a mano el momento memorable como escrito más tarde.
+export function setMemorableLate(key, late) {
+  update((st) => {
+    const day = st.days[key];
+    if (!day || !(day.memorable || '').trim()) return;
+    day.memorableLate = !!late;
+    day.memorableWrittenOn = late ? (day.memorableWrittenOn || (key < todayKey() ? todayKey() : '')) : '';
+  });
 }
 
 // ---------- Tareas del día ----------
@@ -398,7 +445,10 @@ export function removeSection(id) {
     st.sections = st.sections.filter((s) => s.id !== id);
     st.habits = st.habits.filter((h) => h.section !== id);
     for (const k of Object.keys(st.days)) {
-      for (const hid of ids) delete st.days[k].habits[hid];
+      for (const hid of ids) {
+        delete st.days[k].habits[hid];
+        delete st.days[k].targets[hid];
+      }
       tidyDay(st, k);
     }
   });
@@ -441,6 +491,7 @@ export function removeHabit(id) {
     st.habits = st.habits.filter((h) => h.id !== id);
     for (const k of Object.keys(st.days)) {
       delete st.days[k].habits[id];
+      delete st.days[k].targets[id];
       tidyDay(st, k);
     }
   });

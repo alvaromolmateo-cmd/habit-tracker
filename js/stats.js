@@ -202,3 +202,38 @@ export function monthsWithData(state) {
   }
   return [...set].sort();
 }
+
+// ---------- Objetivos del día ----------
+// Cómo acabó un hábito marcado como objetivo: lo que se registró ese día o, si no se registró nada,
+// «no hecho» cuando el día ya pasó y «pendiente» mientras sea hoy o un día futuro.
+export const TARGET_LABEL = { done: 'Cumplido', partial: 'A medias', na: 'No aplicó', missed: 'No hecho', pending: 'Pendiente' };
+
+export function targetOutcome(state, key, habitId) {
+  const s = state.days[key]?.habits?.[habitId];
+  if (s) return s;
+  return key < todayKey() ? 'missed' : 'pending';
+}
+
+// Objetivos de uno o varios días (solo de hábitos que siguen existiendo), con su resultado.
+export function targetSummary(state, keys) {
+  const exists = new Set(state.habits.map((h) => h.id));
+  const out = { total: 0, done: 0, partial: 0, na: 0, missed: 0, pending: 0 };
+  for (const k of [].concat(keys)) {
+    for (const id of Object.keys(state.days[k]?.targets || {})) {
+      if (!exists.has(id)) continue;
+      out.total += 1;
+      out[targetOutcome(state, k, id)] += 1;
+    }
+  }
+  return out;
+}
+
+export function targetSummaryLabel(s) {
+  if (!s.total) return '';
+  const parts = [`${s.done} de ${s.total} cumplido${s.total === 1 ? '' : 's'}`];
+  if (s.partial) parts.push(`${s.partial} a medias`);
+  if (s.missed) parts.push(`${s.missed} no hecho${s.missed === 1 ? '' : 's'}`);
+  if (s.na) parts.push(`${s.na} no aplic${s.na === 1 ? 'ó' : 'aron'}`);
+  if (s.pending) parts.push(`${s.pending} pendiente${s.pending === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}

@@ -2,9 +2,9 @@
 // Al pulsar un día se abre un panel (tipo agenda) con los eventos del día, las tareas y el registro de hábitos.
 
 import { getState, emptyDay, addEvent, updateEvent, removeEvent } from '../store.js';
-import { dayCompletion, monthCompletion } from '../stats.js';
+import { dayCompletion, monthCompletion, activeHabits, targetOutcome, targetSummary, TARGET_LABEL } from '../stats.js';
 import { esc, icon, fmtNum, fmtPct, monthNav, openModal, refreshModal, modalHeader, toast } from '../ui.js';
-import { openDayEditor } from '../dayform.js';
+import { openDayEditor, lateMemoLabel } from '../dayform.js';
 import { tasksHTML, bindTasks, taskSummary } from '../tasks.js';
 import { sortedEvents, eventTimeLabel, eventDuration, timeToMin, minToTime } from '../events.js';
 import { monthDays, monthLabel, dayLabel, dayNum, weekdayIdx, WEEKDAYS_SHORT, isFuture, isToday, addMonths, addDays, parseKey } from '../dates.js';
@@ -25,8 +25,9 @@ export function render(ctx) {
     const c = dayCompletion(state, k);
     const events = sortedEvents(day);
     const tasks = taskSummary(state, k);
-    const cls = [isToday(k) ? 'is-today' : '', isFuture(k) ? 'is-future' : '', c || events.length || tasks.total ? 'has-data' : ''].join(' ');
-    const label = [dayLabel(k), c ? `${c.pct}% de hábitos` : '', events.length ? `${events.length} evento${events.length === 1 ? '' : 's'}` : '', tasks.total ? `${tasks.done} de ${tasks.total} tareas` : ''].filter(Boolean).join(', ');
+    const tg = targetSummary(state, k);
+    const cls = [isToday(k) ? 'is-today' : '', isFuture(k) ? 'is-future' : '', c || events.length || tasks.total || tg.total ? 'has-data' : ''].join(' ');
+    const label = [dayLabel(k), c ? `${c.pct}% de hábitos` : '', tg.total ? `${tg.done} de ${tg.total} objetivos cumplidos` : '', events.length ? `${events.length} evento${events.length === 1 ? '' : 's'}` : '', tasks.total ? `${tasks.done} de ${tasks.total} tareas` : ''].filter(Boolean).join(', ');
     cells.push(`
       <button type="button" class="cal-day ${cls}" data-open="${k}" aria-label="${esc(label)}">
         <span class="cal-top">
@@ -40,12 +41,13 @@ export function render(ctx) {
           </span>
           <span class="cal-dots" aria-hidden="true">${'<i></i>'.repeat(Math.min(events.length, 3))}</span>` : ''}
         <span class="cal-meta">
+          ${tg.total ? `<span>🎯 ${tg.done}/${tg.total}</span>` : ''}
           ${tasks.total ? `<span>☑ ${tasks.done}/${tasks.total}</span>` : ''}
           ${day?.mood != null ? `<span>🙂 ${fmtNum(day.mood, 1)}</span>` : ''}
           ${day?.weight != null ? `<span>⚖️ ${fmtNum(day.weight, 1)}</span>` : ''}
           ${day?.sleep != null ? `<span>😴 ${fmtNum(day.sleep, 1)} h</span>` : ''}
         </span>
-        ${day?.memorable ? `<span class="cal-memo">${esc(day.memorable)}</span>` : ''}
+        ${day?.memorable ? `<span class="cal-memo">${day.memorableLate ? '🕓 ' : ''}${esc(day.memorable)}</span>` : ''}
       </button>`);
   }
 
@@ -89,6 +91,9 @@ export function openDayPanel(key) {
     const day = state.days[current] || emptyDay();
     const events = sortedEvents(day);
     const c = dayCompletion(state, current);
+    const habitsById = Object.fromEntries(activeHabits(state).map((h) => [h.id, h]));
+    const targets = Object.keys(day.targets || {}).map((id) => habitsById[id]).filter(Boolean)
+      .map((h) => ({ h, outcome: targetOutcome(state, current, h.id) }));
     const ev = editing ? events.find((e) => e.id === editing) : null;
     if (editing && !ev) editing = null;
     const sub = isToday(current) ? 'Hoy' : isFuture(current) ? 'Próximamente' : String(parseKey(current).getFullYear());
@@ -137,8 +142,13 @@ export function openDayPanel(key) {
               <span>Peso <b>${day.weight == null ? '—' : fmtNum(day.weight, 1) + ' kg'}</b></span>
               <span>Sueño <b>${day.sleep == null ? '—' : fmtNum(day.sleep, 1) + ' h'}</b></span>
             </div>
-            ${day.memorable ? `<p class="dp-memo hand">“${esc(day.memorable)}”</p>` : ''}` : `<p class="muted">${isFuture(current) ? 'Este día aún no ha llegado.' : 'Sin registro todavía.'}</p>`}
-          <button type="button" class="btn" data-open-editor>${icon('edit')} ${c ? 'Editar registro' : 'Registrar hábitos, nota, peso y sueño'}</button>
+            ${day.memorable ? `<p class="dp-memo hand">“${esc(day.memorable)}”</p>${day.memorableLate ? `<p class="memo-late-note">${icon('clock')} ${esc(lateMemoLabel(day))}</p>` : ''}` : ''}` : `<p class="muted">${isFuture(current) ? 'Este día aún no ha llegado.' : 'Sin registro todavía.'}</p>`}
+          ${targets.length ? `
+            <p class="tgt-list-title">${icon('target')} Objetivos del día</p>
+            <ul class="tgt-list">
+              ${targets.map(({ h, outcome }) => `<li><span>${esc(h.emoji)} ${esc(h.name)}</span><span class="tgt-tag tgt-${outcome}">${TARGET_LABEL[outcome]}</span></li>`).join('')}
+            </ul>` : ''}
+          <button type="button" class="btn" data-open-editor>${icon('edit')} ${c ? 'Editar registro' : isFuture(current) ? 'Marcar objetivos del día' : 'Registrar hábitos, nota, peso y sueño'}</button>
         </section>
       </div>`;
   };

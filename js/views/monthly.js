@@ -1,10 +1,10 @@
 // Vista Mensual: cuadrícula de hábitos del mes, cumplimiento, metas, momentos memorables, revisión y meses anteriores.
 
-import { getState, setMetric, cycleHabit, dayHasData, STATE_LABEL } from '../store.js';
-import { activeHabits, habitsBySection, monthCompletion, habitCompletion, metricAverage, monthsWithData } from '../stats.js';
+import { getState, setMetric, setMemorableLate, cycleHabit, dayHasData, STATE_LABEL } from '../store.js';
+import { activeHabits, habitsBySection, monthCompletion, habitCompletion, metricAverage, monthsWithData, targetOutcome, targetSummary, targetSummaryLabel, TARGET_LABEL } from '../stats.js';
 import { esc, icon, fmtNum, fmtPct, monthNav } from '../ui.js';
 import { ring, barList } from '../charts.js';
-import { openDayEditor } from '../dayform.js';
+import { openDayEditor, lateMemoLabel } from '../dayform.js';
 import { monthDays, monthLabel, dayLabel, dayNum, isFuture, isToday, addMonths, weekdayIdx, WEEKDAYS_SHORT } from '../dates.js';
 import { goalsCard, bindGoals, reviewCard, bindReview, goalSummaryLabel } from './shared.js';
 
@@ -32,8 +32,10 @@ function habitGrid(state, keys, groups) {
         ${keys.map((k) => {
           const day = state.days[k];
           const s = day?.habits?.[h.id] || '';
-          const cls = s || (isFuture(k) ? 'future' : dayHasData(day) ? 'empty' : 'nolog');
-          return `<td class="${isToday(k) ? 'is-today' : ''}"><button type="button" class="cell ${cls}" data-cell data-key="${k}" data-habit="${h.id}" aria-label="${esc(h.name)}, día ${dayNum(k)}: ${STATE_LABEL[s] || 'sin marcar'}"></button></td>`;
+          const tgt = day?.targets?.[h.id] ? targetOutcome(state, k, h.id) : null;
+          const cls = (s || (isFuture(k) ? 'future' : dayHasData(day) ? 'empty' : 'nolog')) + (tgt ? ' target' : '');
+          const label = `${h.name}, día ${dayNum(k)}: ${STATE_LABEL[s] || 'sin marcar'}${tgt ? ` · objetivo del día (${TARGET_LABEL[tgt].toLowerCase()})` : ''}`;
+          return `<td class="${isToday(k) ? 'is-today' : ''}"><button type="button" class="cell ${cls}" data-cell data-key="${k}" data-habit="${h.id}" aria-label="${esc(label)}" ${tgt ? `title="Objetivo del día · ${TARGET_LABEL[tgt]}"` : ''}></button></td>`;
         }).join('')}
         <td class="hg-pct">${c.pct == null ? '—' : `${c.pct}%`}</td>
       </tr>`;
@@ -65,6 +67,7 @@ export function render(ctx) {
   const groups = habitsBySection(state);
   const mc = monthCompletion(state, ym);
   const history = monthsWithData(state).filter((m) => m !== ym).reverse();
+  const targets = targetSummary(state, keys);
 
   const items = habits.map((h) => {
     const c = habitCompletion(state, keys, h.id);
@@ -85,10 +88,12 @@ export function render(ctx) {
           <span><i class="cell partial"></i> A medias</span>
           <span><i class="cell na"></i> No aplica</span>
           <span><i class="cell empty"></i> No hecho</span>
+          <span><i class="cell empty target"></i> Objetivo del día</span>
         </div>
       </div>
       ${groups.length ? habitGrid(state, keys, groups) : '<p class="muted">No hay hábitos activos. Añádelos en la sección Hábitos.</p>'}
-      <p class="hint">Toca una casilla para cambiar su estado. Las métricas se editan pulsando sobre el día.</p>
+      ${targets.total ? `<p class="tgt-month">${icon('target')} <span><b>Objetivos del día este mes:</b> ${esc(targetSummaryLabel(targets))}</span></p>` : ''}
+      <p class="hint">Toca una casilla para cambiar su estado. Las métricas se editan pulsando sobre el día; desde ahí también marcas un hábito como objetivo del día con ${icon('target', 'ic-inline')}.</p>
     </div>
 
     <section class="grid-2">
@@ -106,14 +111,16 @@ export function render(ctx) {
     </section>
 
     <div class="card card-memos">
-      <div class="card-head"><h2>${icon('feather')} Momentos memorables</h2><span class="muted">Una línea por día</span></div>
+      <div class="card-head"><h2>${icon('feather')} Momentos memorables</h2><span class="muted">Una línea por día · ${icon('clock', 'ic-inline')} escrito más tarde</span></div>
       <div class="memo-rows">
         ${keys.map((k) => {
           const fut = isFuture(k);
+          const day = state.days[k];
           return `
             <div class="memo-row ${fut ? 'is-future' : ''}">
               <span class="memo-day"><b>${dayNum(k)}</b><small>${WEEKDAYS_SHORT[weekdayIdx(k)]}</small></span>
-              <input class="memo-input" data-memo="${k}" value="${esc(state.days[k]?.memorable || '')}" maxlength="200" placeholder="${fut ? '' : '…'}" ${fut ? 'disabled' : ''} aria-label="Momento memorable del día ${dayNum(k)}">
+              <input class="memo-input" data-memo="${k}" value="${esc(day?.memorable || '')}" maxlength="200" placeholder="${fut ? '' : '…'}" ${fut ? 'disabled' : ''} aria-label="Momento memorable del día ${dayNum(k)}">
+              ${memoLateBtn(k, day)}
             </div>`;
         }).join('')}
       </div>
@@ -143,13 +150,24 @@ export function render(ctx) {
       </div>` : ''}`;
 }
 
+function memoLateBtn(k, day) {
+  const late = !!day?.memorableLate;
+  const has = (day?.memorable || '').trim() !== '';
+  return `<button type="button" class="memo-late ${late ? 'on' : ''}" data-memo-late="${k}" ${has ? '' : 'hidden'} title="${late ? esc(lateMemoLabel(day)) : 'Marcar como escrito más tarde'}" aria-label="Escrito más tarde (día ${dayNum(k)})" aria-pressed="${late}">${icon('clock')}</button>`;
+}
+
 export function mount(root, ctx) {
   root.querySelectorAll('[data-month]').forEach((b) => b.addEventListener('click', () => ctx.setMonth(addMonths(ctx.month, Number(b.dataset.month)))));
   root.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => { ctx.setMonth(b.dataset.goto); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
   root.querySelectorAll('[data-cell]').forEach((b) => b.addEventListener('click', () => cycleHabit(b.dataset.key, b.dataset.habit)));
   root.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openDayEditor(b.dataset.open)));
   root.querySelectorAll('[data-memo]').forEach((inp) => {
-    inp.addEventListener('change', () => setMetric(inp.dataset.memo, 'memorable', inp.value.trim(), { silent: true }));
+    // Se guarda sin redibujar (para no perder el foco al pasar de un día a otro) y se actualiza solo su marca.
+    inp.addEventListener('change', () => {
+      const k = inp.dataset.memo;
+      setMetric(k, 'memorable', inp.value.trim(), { silent: true });
+      inp.parentElement.querySelector('[data-memo-late]').outerHTML = memoLateBtn(k, getState().days[k]);
+    });
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -157,6 +175,12 @@ export function mount(root, ctx) {
         next ? next.focus() : inp.blur();
       }
     });
+  });
+  root.querySelector('.memo-rows')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-memo-late]');
+    if (!b) return;
+    const k = b.dataset.memoLate;
+    setMemorableLate(k, !getState().days[k]?.memorableLate);
   });
   bindGoals(root, ctx.month);
   bindReview(root, ctx.month);

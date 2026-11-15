@@ -326,7 +326,39 @@ small { font-size: 0.72em; font-weight: 500; color: var(--text-2); }
 .st.on.st-done { background: var(--primary); border-color: var(--primary); color: #fff; }
 .st.on.st-partial { background: var(--accent); border-color: var(--accent); color: #fff; }
 .st.on.st-na { background: var(--surface-3); border-color: var(--line-2); color: var(--text-2); }
-.dayform-foot { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13px; color: var(--text-2); }
+.dayform-foot { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13px; color: var(--text-2); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+
+/* Objetivos del día: el hábito queda resaltado y redondeado, sin contar aún como hecho o no hecho */
+.tgt { width: 30px; height: 30px; border-radius: 50%; border: 1px dashed var(--line-2); background: transparent; cursor: pointer; display: grid; place-items: center; padding: 0; color: var(--muted); flex: none; }
+.tgt .ic { width: 16px; height: 16px; }
+.tgt:hover { color: var(--blue); border-color: var(--blue); }
+.tgt.on { background: var(--blue); border: 1px solid var(--blue); color: #fff; }
+.hrow.is-target { background: var(--blue-soft); border-radius: 10px; margin: 2px -6px; padding: 5px 6px; border-bottom-color: transparent; box-shadow: inset 0 0 0 1.5px var(--blue); }
+.hrow.is-target .hrow-emoji { border-radius: 50%; box-shadow: 0 0 0 2px var(--blue); background: var(--surface); height: 26px; line-height: 26px; }
+.tgt-tag { display: inline-block; align-self: flex-start; margin-top: 2px; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--surface); color: var(--blue); border: 1px solid var(--blue); white-space: nowrap; }
+.tgt-tag.tgt-done { background: var(--primary); border-color: var(--primary); color: #fff; }
+.tgt-tag.tgt-partial { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tgt-tag.tgt-na { background: var(--surface-3); border-color: var(--line-2); color: var(--text-2); }
+.tgt-tag.tgt-missed { background: var(--surface); border-color: var(--line-2); color: var(--muted); text-decoration: line-through; }
+.tgt-foot, .tgt-month { display: inline-flex; align-items: center; gap: 5px; color: var(--blue); font-weight: 600; }
+.tgt-foot .ic, .tgt-month .ic { width: 15px; height: 15px; }
+.tgt-month { font-size: 13px; margin: 10px 0 0; gap: 6px; }
+.tgt-month b { color: var(--text); }
+.tgt-list-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--blue); margin: 10px 0 4px; }
+.tgt-list-title .ic { width: 15px; height: 15px; }
+.tgt-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; }
+.tgt-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.tgt-list li:last-child { border-bottom: 0; }
+.tgt-list .tgt-tag { margin-top: 0; align-self: center; }
+.ic-inline { width: 14px; height: 14px; vertical-align: -2px; }
+
+/* Momento memorable escrito más tarde */
+.late-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px dashed var(--line-2); background: transparent; color: var(--muted); cursor: pointer; margin-bottom: 4px; }
+.late-chip .ic { width: 13px; height: 13px; }
+.late-chip:hover { color: var(--text-2); border-color: var(--text-2); }
+.late-chip.on { border-style: solid; border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.memo-late-note { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--accent); font-weight: 600; margin: -4px 0 8px; }
+.memo-late-note .ic { width: 13px; height: 13px; }
 
 /* Tareas del día */
 .task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -392,6 +424,7 @@ small { font-size: 0.72em; font-weight: 500; color: var(--text-2); }
 .cell.na::after { content: '—'; font-weight: 600; }
 .cell.nolog { opacity: 0.45; }
 .cell.future { border-style: dashed; opacity: 0.35; }
+.cell.target { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--blue); opacity: 1; }
 
 /* Anillo + lista de barras */
 .ring-row { display: flex; gap: 18px; align-items: center; }
@@ -494,6 +527,11 @@ small { font-size: 0.72em; font-weight: 500; color: var(--text-2); }
 .memo-day small { color: var(--muted); font-size: 10px; }
 .memo-input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 7px 6px; font: inherit; font-size: 14px; color: var(--text); }
 .memo-input:focus { outline: none; background: var(--surface-2); border-radius: 6px; }
+.memo-late { width: 26px; height: 26px; flex: none; border: 0; border-radius: 50%; background: transparent; color: var(--line-2); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.memo-late[hidden] { display: none; }
+.memo-late .ic { width: 15px; height: 15px; }
+.memo-late:hover { color: var(--text-2); }
+.memo-late.on { color: var(--accent); background: var(--accent-soft); }
 
 /* Revisión mensual */
 .review-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); }
@@ -701,6 +739,8 @@ button.ev-main:hover { background: var(--surface-2); }
   .metric-row { grid-template-columns: 1fr 1fr; gap: 8px; }
   .st { width: 32px; }
   .hrow-time { width: 36px; font-size: 12px; }
+  .hrow { gap: 7px; }
+  .tgt { width: 28px; height: 28px; }
   .btn-more { display: none; }
   .page-head-compact .month-title { font-size: 17px; }
   .page-head-compact .icon-btn { width: 34px; height: 34px; }
